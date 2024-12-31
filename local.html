@@ -17,11 +17,9 @@
   <h2>Results</h2>
   <div id="result">
     <p><strong>Country:</strong> <span id="country"></span></p>
-    <p><strong>City:</strong> <span id="city"></span></p>
     <p><strong>State:</strong> <span id="state"></span></p>
-    <p><strong>ISP:</strong> <span id="isp"></span></p>
-    <p><strong>Time Zone:</strong> <span id="timezone"></span></p>
-    <p><strong>Currency:</strong> <span id="currency"></span></p>
+    <p><strong>City:</strong> <span id="city"></span></p>
+    <p><strong>Street Address:</strong> <span id="address"></span></p>
     <p><strong>Latitude:</strong> <span id="latitude"></span></p>
     <p><strong>Longitude:</strong> <span id="longitude"></span></p>
     <p><strong>Flag:</strong> <img id="flag" src="" alt="Country Flag" style="width: 50px; height: 30px;"></p>
@@ -36,27 +34,21 @@
       const openCageApiKey = 'YOUR_OPENCAGE_API_KEY'; // Replace with your OpenCage API key
 
       try {
-        // Fetch country data from NumVerify API
+        // Step 1: Fetch NumVerify Data
         const geoData = await getGeoDataFromPhoneNumber(phoneNumber, numVerifyApiKey);
 
-        if (!geoData.country) {
-          throw new Error("Could not determine country for the phone number.");
-        }
+        // Step 2: Fetch Location Data from OpenCage
+        const location = await getLocationFromCoordinates(openCageApiKey, geoData);
 
-        // Fetch latitude, longitude, and other details using OpenCage
-        const location = await getLocationFromCountry(openCageApiKey, geoData.country);
-
-        // Display the details
-        document.getElementById('country').textContent = location.country;
-        document.getElementById('city').textContent = location.city;
+        // Step 3: Display Results
+        document.getElementById('country').textContent = geoData.country;
         document.getElementById('state').textContent = location.state;
-        document.getElementById('isp').textContent = geoData.isp;
-        document.getElementById('timezone').textContent = location.timezone;
-        document.getElementById('currency').textContent = location.currency;
+        document.getElementById('city').textContent = location.city;
+        document.getElementById('address').textContent = location.address;
         document.getElementById('latitude').textContent = location.latitude;
         document.getElementById('longitude').textContent = location.longitude;
 
-        // Set country flag
+        // Set Country Flag
         const flagUrl = `https://flagcdn.com/w320/${geoData.countryCode.toLowerCase()}.png`;
         document.getElementById('flag').src = flagUrl;
       } catch (error) {
@@ -65,7 +57,6 @@
       }
     });
 
-    // Function to fetch geolocation data from NumVerify API
     async function getGeoDataFromPhoneNumber(phoneNumber, apiKey) {
       const url = `http://apilayer.net/api/validate?access_key=${apiKey}&number=${phoneNumber}`;
       const response = await fetch(url);
@@ -76,18 +67,23 @@
       const data = await response.json();
       if (data.valid) {
         return {
-          country: data.country_name || "N/A",
+          country: data.country_name || "",
           countryCode: data.country_code || "N/A",
-          isp: data.carrier || "N/A",
+          latitude: data.location?.latitude || "N/A",
+          longitude: data.location?.longitude || "N/A",
         };
       } else {
         throw new Error("Invalid phone number or no data found.");
       }
     }
 
-    // Function to get location details from OpenCage API
-    async function getLocationFromCountry(apiKey, country) {
-      const url = `https://api.opencagedata.com/geocode/v1/json?q=${country}&key=${apiKey}`;
+    async function getLocationFromCoordinates(apiKey, geoData) {
+      const { latitude, longitude, country } = geoData;
+      if (!latitude || !longitude) {
+        throw new Error("Could not determine latitude and longitude.");
+      }
+
+      const url = `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`OpenCage API Error: ${response.status}`);
@@ -97,13 +93,11 @@
       if (data.results && data.results.length > 0) {
         const result = data.results[0];
         return {
-          country: result.components.country || "N/A",
-          city: result.components.city || result.components.town || result.components.village || "N/A",
           state: result.components.state || "N/A",
+          city: result.components.city || result.components.town || result.components.village || "N/A",
+          address: result.formatted || "N/A",
           latitude: result.geometry.lat || "N/A",
           longitude: result.geometry.lng || "N/A",
-          timezone: result.annotations.timezone.name || "N/A",
-          currency: result.annotations.currency.iso_code || "N/A",
         };
       } else {
         throw new Error("No location data found.");
