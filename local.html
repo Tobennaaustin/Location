@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get Location</title>
+</head>
+<body>
+  <h1>Get Your Location</h1>
+  <form id="locationForm">
+    <label for="latitude">Latitude:</label>
+    <input type="text" id="latitude" placeholder="Enter latitude" required>
+    <br><br>
+    <label for="longitude">Longitude:</label>
+    <input type="text" id="longitude" placeholder="Enter longitude" required>
+    <br><br>
+    <button type="submit">Get Location</button>
+  </form>
+
+  <h2>Results</h2>
+  <p id="result">Your location will appear here.</p>
+
+  <script>
+    document.getElementById('locationForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const latitude = document.getElementById('latitude').value;
+      const longitude = document.getElementById('longitude').value;
+      const apiKey = 'YOUR_API_KEY'; // Replace with your OpenCage API key
+
+      // OpenCage API endpoint
+      const url = `https://api.opencagedata.com/geocode/v1/json?q=${latitude},${longitude}&key=${apiKey}`;
+
+      // Fetch location data
+      fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            const location = data.results[0].formatted;
+            document.getElementById('result').textContent = `Location: ${location}`;
+          } else {
+            document.getElementById('result').textContent = "No location found for the provided coordinates.";
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching location:', error);
+          document.getElementById('result').textContent = `Error: ${error.message}`;
+        });
+    });
+  </script>
+</body>
+</html>
